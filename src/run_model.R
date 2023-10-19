@@ -87,6 +87,18 @@ ggplot(output) +
   geom_line(aes(doy, R, col = "R")) +
   theme_minimal()
 
+output_plot = output %>% mutate(date = as.Date(doy, origin = "2022-12-31")) %>%
+  mutate(datetime = as.POSIXct(paste0(date," 12:00:00")))
+
+filter_time = "2023-01-03 17:45:00"
+ggplot(data%>% filter(datetime <= filter_time)) +
+  geom_line(aes(datetime, do.obs)) + 
+  geom_line(data = output_plot%>% filter(datetime <= filter_time), aes(datetime, GPP, col = "GPP")) +
+  geom_point(data = output_plot%>% filter(datetime <= filter_time), aes(datetime, GPP, col = "GPP")) +
+  geom_line(data = output_plot%>% filter(datetime <= filter_time), aes(datetime, R, col = "R")) +
+  geom_point(data = output_plot%>% filter(datetime <= filter_time), aes(datetime, R, col = "R")) +
+  theme_minimal()
+
 # BOOKKEEPING
 output = metab(data = data, method = 'bookkeep', lake.lat = 43.3)
 
