@@ -5,8 +5,11 @@ library(reshape2)
 
 setwd("~/Documents/Adrianna/wingra_metabolism/")
 
-logger <- read.csv("data/january/deep_DO.csv")
-meteorology <- read.csv('data/january/weather.csv')
+logger <- read_csv("data/january/deep_DO.csv")
+meteorology <- read_csv('data/january/weather.csv')
+hrs<- hours(6)
+meteorology<- meteorology%>%
+  mutate(datetime = datetime - hrs)
 
 # fake data
 fake = data.frame(datetime =seq(as.POSIXct("2014-06-16 00:00:00", tz="GMT"),
