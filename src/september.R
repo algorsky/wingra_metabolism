@@ -5,35 +5,48 @@ library(reshape2)
 
 setwd("~/Documents/Adrianna/wingra_metabolism/")
 
-logger <- read.csv("data/september/deep_DO.csv")
-meteorology <- read.csv('data/september/weather.csv')
+wingra <- read.csv("data/wingra_temp_do.csv")|>
+  mutate(datetime = ymd_hms(datetime, tz = Sys.timezone()))
+#calculate Z mix
+z.mix = ts.meta.depths(get.vars(wingra, 'wtr'), seasonal=TRUE) |> 
+  select(datetime, top)%>%
+  rename(z.mix = top) |> 
+  mutate(z.mix = if_else(z.mix <= 0 | is.na(z.mix), 3.4, z.mix))
+wingra_df<-merge(wingra, z.mix, by = "datetime")
+
+september<- wingra_df%>%
+  filter(month(datetime)==9)
+meteorology <- read.csv('data/september/weather.csv')|>
+  mutate(datetime = ymd_hms(datetime, tz = Sys.timezone()))
+
 
 
 # ADRIANNAS DATA OF LAKE WINGRA
-df = merge(logger, meteorology, by = 'datetime') %>%
+df = merge(september, meteorology, by = 'datetime') %>%
   mutate(wind_speed_ms = wind_speed_ms,
          solar_flux_Wm2 = solar_flux_Wm2) %>%
   mutate(datetime = lubridate::ymd_hms(datetime),
          DO_sat = o2.at.sat.base(temp = Temp_C, altitude = 258),
-         z_mix = 1,
+        # z_mix = 1,
          k_600 = k.vachon.base(wnd = wind_speed_ms, lake.area = 1.3 * 10**6),
          k_gas = k600.2.kGAS.base(k600 = k_600, temperature =Temp_C, gas = "O2"),
-         PAR = solar_flux_Wm2 * 2.114) %>%
-  mutate(DO_sat_calc = (100 * DO_mgL)/DO_perc)
+         PAR = solar_flux_Wm2 * 2.114) #%>%
+ # mutate(DO_sat_calc = (100 * DO_mgL)/DO_perc)
 
-ggplot(df) +
-  geom_line(aes(datetime, DO_sat, col = 'calculated')) + 
-  geom_line(aes(datetime, DO_sat_calc, col = 'downscaled')) + 
-  theme_minimal()
+#ggplot(df) +
+#  geom_line(aes(datetime, DO_sat, col = 'calculated')) + 
+ # geom_line(aes(datetime, DO_sat_calc, col = 'downscaled')) + 
+  #theme_minimal()
 
 # SW (W/m2) to PAR (umol/m2/s) is 2.114
 # gpp = p_max * tanh((P_alpha * lux))/ p_max)
 # r = r_20 * theta**(T-20)
 # 15 min measurements --> frequency of 96 (60/15 * 24) measurements per day
 
+
 data = df %>%
-  mutate(min = minute(datetime)) %>% filter(min != 15) %>%
-  rename(do.obs = DO_mgL, do.sat = DO_sat, k.gas = k_gas, z.mix = z_mix, irr = PAR, wtr = Temp_C) %>%
+ # mutate(min = minute(datetime)) %>% filter(min != 15) %>%
+  rename(do.obs = DO_mgL, do.sat = DO_sat, k.gas = k_gas, z.mix = z.mix, irr = PAR, wtr = Temp_C) %>%
   select(datetime, do.obs, do.sat, k.gas, z.mix, irr, wtr)
 
 m.df = reshape2::melt(data, id = 'datetime')
